@@ -4529,40 +4529,6 @@ garrow_index_options_new(void)
   return GARROW_INDEX_OPTIONS(g_object_new(GARROW_TYPE_INDEX_OPTIONS, NULL));
 }
 
-namespace {
-  static GArrowOptionalNullPlacement
-  garrow_optional_null_placement_from_raw(
-    const std::optional<arrow::compute::NullPlacement> &arrow_placement)
-  {
-    if (!arrow_placement.has_value()) {
-      return GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED;
-    }
-
-    switch (arrow_placement.value()) {
-    case arrow::compute::NullPlacement::AtStart:
-      return GARROW_OPTIONAL_NULL_PLACEMENT_AT_START;
-    case arrow::compute::NullPlacement::AtEnd:
-      return GARROW_OPTIONAL_NULL_PLACEMENT_AT_END;
-    default:
-      return GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED;
-    }
-  }
-
-  static std::optional<arrow::compute::NullPlacement>
-  garrow_optional_null_placement_to_raw(GArrowOptionalNullPlacement garrow_placement)
-  {
-    switch (garrow_placement) {
-    case GARROW_OPTIONAL_NULL_PLACEMENT_AT_START:
-      return arrow::compute::NullPlacement::AtStart;
-    case GARROW_OPTIONAL_NULL_PLACEMENT_AT_END:
-      return arrow::compute::NullPlacement::AtEnd;
-    case GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED:
-    default:
-      return std::nullopt;
-    }
-  }
-} // namespace
-
 enum {
   PROP_RANK_OPTIONS_NULL_PLACEMENT = 1,
   PROP_RANK_OPTIONS_TIEBREAKER,
@@ -4585,11 +4551,13 @@ garrow_rank_options_set_property(GObject *object,
   switch (prop_id) {
   case PROP_RANK_OPTIONS_NULL_PLACEMENT:
     {
-      auto null_placement = static_cast<GArrowOptionalNullPlacement>(g_value_get_enum(value));
+      auto null_placement =
+        static_cast<GArrowOptionalNullPlacement>(g_value_get_enum(value));
       if (null_placement == GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED) {
         options->null_placement = std::nullopt;
       } else {
-        options->null_placement = static_cast<arrow::compute::NullPlacement>(null_placement);
+        options->null_placement =
+          static_cast<arrow::compute::NullPlacement>(null_placement);
       }
     }
     break;
@@ -4614,7 +4582,9 @@ garrow_rank_options_get_property(GObject *object,
   switch (prop_id) {
   case PROP_RANK_OPTIONS_NULL_PLACEMENT:
     if (options->null_placement.has_value()) {
-      g_value_set_enum(value, static_cast<GArrowOptionalNullPlacement>(options->null_placement.value()));
+      g_value_set_enum(
+        value,
+        static_cast<GArrowOptionalNullPlacement>(options->null_placement.value()));
     } else {
       g_value_set_enum(value, GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED);
     }
@@ -4646,6 +4616,11 @@ garrow_rank_options_class_init(GArrowRankOptionsClass *klass)
 
   auto options = arrow::compute::RankOptions::Defaults();
 
+  auto default_null_placement =
+    options.null_placement.has_value()
+      ? static_cast<GArrowOptionalNullPlacement>(options.null_placement.value())
+      : GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED;
+
   GParamSpec *spec;
   /**
    * GArrowRankOptions:null-placement:
@@ -4654,14 +4629,13 @@ garrow_rank_options_class_init(GArrowRankOptionsClass *klass)
    *
    * Since: 12.0.0
    */
-  spec =
-    g_param_spec_enum("null-placement",
-                      "Null placement",
-                      "Whether nulls and NaNs are placed "
-                      "at the start or at the end.",
-                      GARROW_TYPE_OPTIONAL_NULL_PLACEMENT,
-                      garrow_optional_null_placement_from_raw(options.null_placement),
-                      static_cast<GParamFlags>(G_PARAM_READWRITE));
+  spec = g_param_spec_enum("null-placement",
+                           "Null placement",
+                           "Whether nulls and NaNs are placed "
+                           "at the start or at the end.",
+                           GARROW_TYPE_OPTIONAL_NULL_PLACEMENT,
+                           default_null_placement,
+                           static_cast<GParamFlags>(G_PARAM_READWRITE));
 
   g_object_class_install_property(gobject_class, PROP_RANK_OPTIONS_NULL_PLACEMENT, spec);
 
@@ -8901,8 +8875,16 @@ garrow_rank_quantile_options_set_property(GObject *object,
 
   switch (prop_id) {
   case PROP_RANK_QUANTILE_OPTIONS_NULL_PLACEMENT:
-    options->null_placement = garrow_optional_null_placement_to_raw(
-      static_cast<GArrowOptionalNullPlacement>(g_value_get_enum(value)));
+    {
+      auto null_placement =
+        static_cast<GArrowOptionalNullPlacement>(g_value_get_enum(value));
+      if (null_placement == GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED) {
+        options->null_placement = std::nullopt;
+      } else {
+        options->null_placement =
+          static_cast<arrow::compute::NullPlacement>(null_placement);
+      }
+    }
     break;
   default:
     G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
@@ -8921,8 +8903,13 @@ garrow_rank_quantile_options_get_property(GObject *object,
 
   switch (prop_id) {
   case PROP_RANK_QUANTILE_OPTIONS_NULL_PLACEMENT:
-    g_value_set_enum(value,
-                     garrow_optional_null_placement_from_raw(options->null_placement));
+    if (options->null_placement.has_value()) {
+      g_value_set_enum(
+        value,
+        static_cast<GArrowOptionalNullPlacement>(options->null_placement.value()));
+    } else {
+      g_value_set_enum(value, GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED);
+    }
     break;
   default:
     G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
@@ -8948,6 +8935,11 @@ garrow_rank_quantile_options_class_init(GArrowRankQuantileOptionsClass *klass)
 
   auto options = arrow::compute::RankQuantileOptions::Defaults();
 
+  auto default_null_placement =
+    options.null_placement.has_value()
+      ? static_cast<GArrowOptionalNullPlacement>(options.null_placement.value())
+      : GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED;
+
   GParamSpec *spec;
   /**
    * GArrowRankQuantileOptions:null-placement:
@@ -8961,7 +8953,7 @@ garrow_rank_quantile_options_class_init(GArrowRankQuantileOptionsClass *klass)
                            "Whether nulls and NaNs are placed "
                            "at the start or at the end.",
                            GARROW_TYPE_OPTIONAL_NULL_PLACEMENT,
-                           garrow_optional_null_placement_from_raw(options.null_placement),
+                           default_null_placement,
                            static_cast<GParamFlags>(G_PARAM_READWRITE));
   g_object_class_install_property(gobject_class,
                                   PROP_RANK_QUANTILE_OPTIONS_NULL_PLACEMENT,

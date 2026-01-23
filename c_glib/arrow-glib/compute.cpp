@@ -4584,8 +4584,14 @@ garrow_rank_options_set_property(GObject *object,
 
   switch (prop_id) {
   case PROP_RANK_OPTIONS_NULL_PLACEMENT:
-    options->null_placement = garrow_optional_null_placement_to_raw(
-      static_cast<GArrowOptionalNullPlacement>(g_value_get_enum(value)));
+    {
+      auto null_placement = static_cast<GArrowOptionalNullPlacement>(g_value_get_enum(value));
+      if (null_placement == GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED) {
+        options->null_placement = std::nullopt;
+      } else {
+        options->null_placement = static_cast<arrow::compute::NullPlacement>(null_placement);
+      }
+    }
     break;
   case PROP_RANK_OPTIONS_TIEBREAKER:
     options->tiebreaker =
@@ -4607,8 +4613,11 @@ garrow_rank_options_get_property(GObject *object,
 
   switch (prop_id) {
   case PROP_RANK_OPTIONS_NULL_PLACEMENT:
-    g_value_set_enum(value,
-                     garrow_optional_null_placement_from_raw(options->null_placement));
+    if (options->null_placement.has_value()) {
+      g_value_set_enum(value, static_cast<GArrowOptionalNullPlacement>(options->null_placement.value()));
+    } else {
+      g_value_set_enum(value, GARROW_OPTIONAL_NULL_PLACEMENT_UNSPECIFIED);
+    }
     break;
   case PROP_RANK_OPTIONS_TIEBREAKER:
     g_value_set_enum(value, static_cast<GArrowRankTiebreaker>(options->tiebreaker));
